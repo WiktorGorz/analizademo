@@ -1,0 +1,98 @@
+---
+title: "Wiktorzad"
+output: html_document
+---
+
+```{r}
+library(haven)
+adres_cbos <- paste0("https://raw.githubusercontent.com/kflisikowsky/sad/",
+                     "main/data/CBOS_201733_331_SPSS.sav")
+plik_cbos <- tempfile(fileext = ".sav")
+download.file(adres_cbos, plik_cbos, mode = "wb", quiet = TRUE)
+cbos_raw <- read_sav(plik_cbos)
+unlink(plik_cbos)
+
+cbos <- cbos_raw %>% transmute(
+  plec = as_factor(plec),
+  miejscowosc = as_factor(klm6),
+  kierunek = as_factor(q24),
+  prognoza = as_factor(q25),
+  wyksztalcenie = as_factor(q15)
+)
+dim(cbos)
+head(cbos)
+```
+z5) Sprawdź liczbę obserwacji i braków. Przygotuj tabelę liczności i odsetków dla `plec` oraz `miejscowosc`. Jaki odsetek ankietowanych mieszkał na wsi, a jaki w miastach liczących co najmniej 500 tys. mieszkańców? Licz odsetki względem liczby **niebrakujących odpowiedzi** w danej zmiennej i podaj użyty mianownik.
+```{r}
+#Liczba obserwacji
+nrow(cbos)
+#Liczba braków
+sum(is.na(cbos$plec))
+sum(is.na(cbos$miejscowosc))
+
+```
+Tabela miejscowość
+```{r}
+tabela_miejscowosc<-cbos%>%
+  filter(!is.na(miejscowosc))%>%
+  count(miejscowosc)%>%
+  mutate(procent=100*n/sum(n))%>%
+  filter(miejscowosc%in%c("wieś","miasto 500 000 i więcej"))
+
+```
+Tabela plec 
+```{r}
+tabela_plec<-cbos%>%
+  filter(!is.na(plec))%>%
+  count(plec)%>%
+  mutate(procent=100*n/sum(n))
+```
+
+### Zadanie 6 — jak oceniano kierunek zmian w kraju?
+
+Oblicz liczebności i odsetki odpowiedzi na pytanie `kierunek`. Pokaż osobno odpowiedzi „W dobrym”, „W złym”, „Trudno powiedzieć” i odmowy, jeśli występują. Która odpowiedź była najczęstsza?
+
+Następnie policz udział odpowiedzi „W dobrym” **tylko wśród osób, które wybrały „W dobrym” albo „W złym”**. Porównaj go z odsetkiem w całej próbie. Wyjaśnij różnicę w mianowniku.
+
+```{r}
+cbos%>%
+  filter(kierunek %in% c("W dobrym","W złym","Trudno powiedzieć","Odmowa odpowiedzi"))%>%
+  count(kierunek)
+```
+Udział odpowiedzi „W dobrym” **tylko wśród osób, które wybrały „W dobrym” albo „W złym”**
+```{r}
+Udział_1_ramka<-cbos%>%
+  filter(kierunek %in% c("W dobrym","W złym"))%>%
+  count(kierunek)%>%
+  mutate(Udział=n*100/sum(n))%>%
+  filter(kierunek %in% c("W dobrym"))
+```
+
+```{r}
+Udział_1<-as.numeric(Udział_1_ramka$Udział[1])
+```
+
+Udział odpowiedzi „W dobrym” w całej próbie
+```{r}
+Udział_2_ramka<-cbos%>%
+  count(kierunek)%>%
+  mutate(Udział=n*100/sum(n))%>%
+  filter(kierunek %in% c("W dobrym"))
+```
+
+```{r}
+Udział_2<-as.numeric(Udział_2_ramka$Udział[1])
+```
+
+Porównanie
+```{r}
+if(Udział_1>Udział_2){
+  print("Udział odpowiedzi „W dobrym” tylko wśród osób, które wybrały „W dobrym” albo „W złym” jest większy")
+}else if(Udział_1<Udział_2){
+  print("Udział odpowiedzi „W dobrym” w całej próbie jest większy")
+}else{
+  print("Udział są równe")
+}
+
+```
+
